@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
-import 'dart:isolate';
 
 final _formKey = GlobalKey<FormState>();
 
@@ -181,13 +180,6 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
 
   String durationType = '';
 
-  void timerFunction() async {
-    late Timer basicTimer =
-        Timer.periodic(Duration(seconds: savedWorkOnTime), (timer) {
-      newFunction();
-    });
-  }
-
   _retrieveTimerInfo() async {
     final prefs = await SharedPreferences.getInstance();
     savedWorkOnTime = prefs.getInt('workOnTime') ?? -1;
@@ -203,23 +195,50 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
     print('timer end');
   }
 
+  startTimer() async {
+    final startTime = DateTime.now().toString();
+    //final b = DateTime.parse(startTime);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('startTime', startTime);
+  }
+
+  runTimer() async {
+    final prefs = await SharedPreferences.getInstance();
+    String old = prefs.getString('startTime') ?? 'invalid datetime error';
+
+    final oldDateTime = DateTime.parse(old);
+
+    final currentDateTime = DateTime.now();
+
+    int difference = currentDateTime.difference(oldDateTime).inSeconds;
+
+    print(difference);
+
+    return difference;
+  }
+
+  runTimerRecursive() {
+    Timer.periodic(const Duration(seconds: 1), (timer) async {
+      int difference = await runTimer();
+      if (difference % (savedWorkOnTime + savedRestTime) == 0) {
+        print('divisible');
+      } else if (difference % (savedWorkOnTime + savedRestTime) != 0) {
+        int remainder = difference % (savedWorkOnTime + savedRestTime);
+      }
+    });
+  }
+  //  _saveTimerSettings() async {
+  // final prefs = await SharedPreferences.getInstance();
+  // await prefs.setInt('workOnTime', workOnTime);
+  //await prefs.setInt('restTime', restTime);
+  //await prefs.setString('avatar', avatar);
+  //}
+
   @override
   void initState() {
     super.initState();
     _retrieveTimerInfo();
-  }
-
-  void newFunction() {
-    if (durationType == 'work') {
-      setState(() {
-        durationType = 'rest';
-      });
-    } else if (durationType == 'rest') {
-      setState(() {
-        durationType = 'work';
-      });
-    }
-    print(durationType);
   }
 
   Widget build(BuildContext context) {
@@ -248,11 +267,8 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
                         : SizedBox(),
                 ElevatedButton(
                     onPressed: () {
-                      setState(() {
-                        durationType = 'work';
-                      });
-                      timerFunction();
-                      print(durationType);
+                      startTimer();
+                      runTimerRecursive();
                     },
                     child: const Text('start timer'))
               ],
