@@ -5,6 +5,67 @@ import 'dart:async';
 
 final _formKey = GlobalKey<FormState>();
 
+bool _isActive = true;
+int savedWorkOnTime = 0;
+int savedRestTime = 0;
+String savedAvatar = '';
+
+String durationTypeA = '';
+_retrieveTimerInfo() async {
+  final prefs = await SharedPreferences.getInstance();
+  savedWorkOnTime = prefs.getInt('workOnTime') ?? -1;
+  savedRestTime = prefs.getInt('restTime') ?? -1;
+  savedAvatar = prefs.getString('avatar') ?? 'not found';
+
+  print(savedWorkOnTime);
+  print(savedRestTime);
+  print(savedAvatar);
+}
+
+startTimer() async {
+  final startTime = DateTime.now().toString();
+  //final b = DateTime.parse(startTime);
+
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('startTime', startTime);
+}
+
+runTimer() async {
+  final prefs = await SharedPreferences.getInstance();
+  String old = prefs.getString('startTime') ?? 'invalid datetime error';
+
+  final oldDateTime = DateTime.parse(old);
+
+  final currentDateTime = DateTime.now();
+
+  int difference = currentDateTime.difference(oldDateTime).inSeconds;
+
+  print(difference);
+
+  return difference;
+}
+
+runTimerRecursive() {
+  Timer.periodic(const Duration(seconds: 1), (timer) async {
+    int difference = await runTimer();
+    if (difference % (savedWorkOnTime + savedRestTime) == 0) {
+      print('divisible');
+    } else if (difference % (savedWorkOnTime + savedRestTime) != 0) {
+      int remainder = difference % (savedWorkOnTime + savedRestTime);
+
+      if (_isActive == true) {
+        if (remainder <= savedWorkOnTime) {
+          durationTypeA = 'work';
+        } else if (remainder > savedWorkOnTime) {
+          durationTypeA = 'rest';
+        }
+
+        print(durationTypeA);
+      }
+    }
+  });
+}
+
 void main() {
   runApp(const MainApp());
 }
@@ -65,6 +126,14 @@ class _ParentWidgetState extends State<ParentWidget> {
         onDestinationSelected: (int index) {
           setState(() {
             currentPage = index;
+
+            if (currentPage == 1) {
+              _isActive = false;
+            }
+
+            if (currentPage == 0) {
+              _isActive = true;
+            }
           });
         },
         selectedIndex: currentPage,
@@ -180,59 +249,10 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
 
   String durationType = '';
 
-  _retrieveTimerInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    savedWorkOnTime = prefs.getInt('workOnTime') ?? -1;
-    savedRestTime = prefs.getInt('restTime') ?? -1;
-    savedAvatar = prefs.getString('avatar') ?? 'not found';
-
-    print(savedWorkOnTime);
-    print(savedRestTime);
-    print(savedAvatar);
-  }
-
   endTimer() {
     print('timer end');
   }
 
-  startTimer() async {
-    final startTime = DateTime.now().toString();
-    //final b = DateTime.parse(startTime);
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('startTime', startTime);
-  }
-
-  runTimer() async {
-    final prefs = await SharedPreferences.getInstance();
-    String old = prefs.getString('startTime') ?? 'invalid datetime error';
-
-    final oldDateTime = DateTime.parse(old);
-
-    final currentDateTime = DateTime.now();
-
-    int difference = currentDateTime.difference(oldDateTime).inSeconds;
-
-    print(difference);
-
-    return difference;
-  }
-
-  runTimerRecursive() {
-    Timer.periodic(const Duration(seconds: 1), (timer) async {
-      int difference = await runTimer();
-      if (difference % (savedWorkOnTime + savedRestTime) == 0) {
-        print('divisible');
-      } else if (difference % (savedWorkOnTime + savedRestTime) != 0) {
-        int remainder = difference % (savedWorkOnTime + savedRestTime);
-        if (remainder <= savedWorkOnTime) {
-          print('work');
-        } else if (remainder > savedWorkOnTime) {
-          print('rest');
-        }
-      }
-    });
-  }
   //  _saveTimerSettings() async {
   // final prefs = await SharedPreferences.getInstance();
   // await prefs.setInt('workOnTime', workOnTime);
@@ -244,9 +264,41 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
   void initState() {
     super.initState();
     _retrieveTimerInfo();
+    setState(() {
+      durationType = durationTypeA;
+    });
   }
 
   Widget build(BuildContext context) {
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    // USE A STREAM BUILDER
+    /*StreamBuilder<int>(
+      stream: myStream, // Your stream instance
+      builder: (BuildContext context, AsyncSnapshot<int> snapshot) {
+        // Build your UI based on the stream's data
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircularProgressIndicator();
+        } else if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}');
+        } else {
+          final data = snapshot.data;
+          return Text('Data: $data');
+        }
+      },
+    ); */
+
     return Center(
         child: Padding(
             padding: const EdgeInsets.all(10),
@@ -274,6 +326,18 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
                     onPressed: () {
                       startTimer();
                       runTimerRecursive();
+                      Timer.periodic(const Duration(seconds: 1), (timer) {
+                        print('checked');
+                        if (durationType == 'work') {
+                          setState(() {
+                            durationType = 'rest';
+                          });
+                        } else if (durationType == 'rest') {
+                          setState(() {
+                            durationType = 'work';
+                          });
+                        }
+                      });
                     },
                     child: const Text('start timer'))
               ],
