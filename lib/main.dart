@@ -225,6 +225,11 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
         print('divisible');
       } else if (difference % (savedWorkOnTime + savedRestTime) != 0) {
         int remainder = difference % (savedWorkOnTime + savedRestTime);
+        if (remainder <= savedWorkOnTime) {
+          print('work');
+        } else if (remainder > savedWorkOnTime) {
+          print('rest');
+        }
       }
     });
   }
