@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+import 'dart:isolate';
 
 final _formKey = GlobalKey<FormState>();
 
@@ -29,7 +31,7 @@ class ParentWidget extends StatefulWidget {
 }
 
 class _ParentWidgetState extends State<ParentWidget> {
-  int currentPage = 1;
+  int currentPage = 0;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -177,6 +179,15 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
   int savedRestTime = 0;
   String savedAvatar = '';
 
+  String durationType = '';
+
+  void timerFunction() async {
+    late Timer basicTimer =
+        Timer.periodic(Duration(seconds: savedWorkOnTime), (timer) {
+      newFunction();
+    });
+  }
+
   _retrieveTimerInfo() async {
     final prefs = await SharedPreferences.getInstance();
     savedWorkOnTime = prefs.getInt('workOnTime') ?? -1;
@@ -188,10 +199,27 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
     print(savedAvatar);
   }
 
+  endTimer() {
+    print('timer end');
+  }
+
   @override
   void initState() {
     super.initState();
     _retrieveTimerInfo();
+  }
+
+  void newFunction() {
+    if (durationType == 'work') {
+      setState(() {
+        durationType = 'rest';
+      });
+    } else if (durationType == 'rest') {
+      setState(() {
+        durationType = 'work';
+      });
+    }
+    print(durationType);
   }
 
   Widget build(BuildContext context) {
@@ -199,7 +227,35 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
         child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
-              children: [ElevatedButton(onPressed: () {}, child: Text())],
+              children: [
+                durationType == 'work'
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('get to work!'),
+                          //image changes go here
+                          Image(image: AssetImage('assets/eggs/chick-pio.gif'))
+                        ],
+                      )
+                    : durationType == 'rest'
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('take a break!'),
+                              Image(image: AssetImage('assets/eggs/egg.gif'))
+                            ],
+                          )
+                        : SizedBox(),
+                ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        durationType = 'work';
+                      });
+                      timerFunction();
+                      print(durationType);
+                    },
+                    child: const Text('start timer'))
+              ],
             )));
   }
 }
