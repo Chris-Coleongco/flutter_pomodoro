@@ -11,6 +11,11 @@ int savedRestTime = 0;
 String savedAvatar = '';
 
 String durationTypeA = '';
+
+StreamController<String> _durationTypeController =
+    StreamController<String>.broadcast();
+Stream<String> get durationTypeStream => _durationTypeController.stream;
+
 _retrieveTimerInfo() async {
   final prefs = await SharedPreferences.getInstance();
   savedWorkOnTime = prefs.getInt('workOnTime') ?? -1;
@@ -52,16 +57,17 @@ runTimerRecursive() {
       print('divisible');
     } else if (difference % (savedWorkOnTime + savedRestTime) != 0) {
       int remainder = difference % (savedWorkOnTime + savedRestTime);
-
-      if (_isActive == true) {
-        if (remainder <= savedWorkOnTime) {
-          durationTypeA = 'work';
-        } else if (remainder > savedWorkOnTime) {
-          durationTypeA = 'rest';
-        }
-
-        print(durationTypeA);
+      if (remainder <= savedWorkOnTime) {
+        durationTypeA = 'work';
+        print('SHOULD RETURN WORK');
+        _durationTypeController.add(durationTypeA);
+      } else {
+        durationTypeA = 'rest';
+        print('SHOULD RETURN REST');
+        _durationTypeController.add(durationTypeA);
       }
+
+      print(durationTypeA);
     }
   });
 }
@@ -270,41 +276,20 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
   }
 
   Widget build(BuildContext context) {
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    // USE A STREAM BUILDER
-    /*StreamBuilder<int>(
-      stream: myStream, // Your stream instance
-      builder: (BuildContext context, AsyncSnapshot<int> snapshot) {
-        // Build your UI based on the stream's data
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return CircularProgressIndicator();
-        } else if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
-        } else {
-          final data = snapshot.data;
-          return Text('Data: $data');
-        }
-      },
-    ); */
-
     return Center(
-        child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: StreamBuilder<String>(
+          stream: durationTypeStream, // Use the stream you've set up
+          initialData: durationTypeA, // Provide the initial value
+          builder: (context, snapshot) {
+            final currentDurationType = snapshot.data ?? durationTypeA;
+
+            print('Stream value: $currentDurationType');
+
+            return Column(
               children: [
-                durationType == 'work'
+                currentDurationType == 'work'
                     ? Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -313,7 +298,7 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
                           Image(image: AssetImage('assets/eggs/chick-pio.gif'))
                         ],
                       )
-                    : durationType == 'rest'
+                    : currentDurationType == 'rest'
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -323,24 +308,27 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
                           )
                         : SizedBox(),
                 ElevatedButton(
-                    onPressed: () {
-                      startTimer();
-                      runTimerRecursive();
-                      Timer.periodic(const Duration(seconds: 1), (timer) {
-                        print('checked');
-                        if (durationType == 'work') {
-                          setState(() {
-                            durationType = 'rest';
-                          });
-                        } else if (durationType == 'rest') {
-                          setState(() {
-                            durationType = 'work';
-                          });
-                        }
-                      });
-                    },
-                    child: const Text('start timer'))
+                  onPressed: () {
+                    startTimer();
+                    runTimerRecursive();
+                    if (_isActive) {
+                      // Toggle between 'work' and 'rest' when the button is pressed
+                      if (currentDurationType == 'work') {
+                        // Add the new value to the stream
+                        _durationTypeController.add('rest');
+                      } else if (currentDurationType == 'rest') {
+                        // Add the new value to the stream
+                        _durationTypeController.add('work');
+                      }
+                    }
+                  },
+                  child: const Text('start timer'),
+                ),
               ],
-            )));
+            );
+          },
+        ),
+      ),
+    );
   }
 }
