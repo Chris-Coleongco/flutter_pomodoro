@@ -129,7 +129,7 @@ class _ParentWidgetState extends State<ParentWidget> {
               children: [
                 Title(color: Colors.black, child: const Text('current timer')),
                 const SizedBox(height: 20),
-                CurrentTimer(),
+                const CurrentTimer(),
               ],
             )
           : currentPage == 1
@@ -139,12 +139,12 @@ class _ParentWidgetState extends State<ParentWidget> {
                     Title(
                         color: Colors.black, child: const Text('timer setup')),
                     const SizedBox(height: 20),
-                    FormWidget(),
+                    const FormWidget(),
                   ],
                 )
-              : SizedBox(),
+              : const SizedBox(),
       bottomNavigationBar: NavigationBar(
-        destinations: [
+        destinations: const [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.timer), label: 'Create')
         ],
@@ -298,6 +298,7 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
     savedAvatar = timerInfo[2];
   }
 
+  @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
@@ -313,7 +314,7 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
             return Column(
               children: [
                 currentDurationType == 'work'
-                    ? Column(
+                    ? const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text('get to work!'),
@@ -322,19 +323,19 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
                         ],
                       )
                     : currentDurationType == 'rest'
-                        ? Column(
+                        ? const Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text('take a break!'),
                               Image(image: AssetImage('assets/eggs/egg.gif'))
                             ],
                           )
-                        : SizedBox(),
+                        : const SizedBox(),
                 StreamBuilder<int>(
                   stream: remainderStream, // Replace with your remainder stream
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
-                      return SizedBox();
+                      return const SizedBox();
                     }
 
                     int remainder = snapshot.data!;
@@ -381,8 +382,8 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
                               stopButtonClicked = true;
                               // STOP THE TIMER
                             },
-                            child: Text('stop timer'))
-                        : SizedBox(),
+                            child: const Text('stop timer'))
+                        : const SizedBox(),
               ],
             );
           },
