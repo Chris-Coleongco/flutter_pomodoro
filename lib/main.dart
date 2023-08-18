@@ -5,16 +5,12 @@ import 'dart:async';
 
 final _formKey = GlobalKey<FormState>();
 
-bool _isActive = true;
-int savedWorkOnTime = 0;
-int savedRestTime = 0;
-String savedAvatar = '';
-
-String durationTypeA = '';
-
 StreamController<String> _durationTypeController =
     StreamController<String>.broadcast();
 Stream<String> get durationTypeStream => _durationTypeController.stream;
+
+StreamController<int> _remainderController = StreamController<int>.broadcast();
+Stream<int> get remainderStream => _remainderController.stream;
 
 _retrieveTimerInfo() async {
   final prefs = await SharedPreferences.getInstance();
@@ -25,7 +21,20 @@ _retrieveTimerInfo() async {
   print(savedWorkOnTime);
   print(savedRestTime);
   print(savedAvatar);
+
+  List<dynamic> timerInfo = [savedWorkOnTime, savedRestTime, savedAvatar];
+
+  return timerInfo;
 }
+
+List<dynamic> timerInfo = _retrieveTimerInfo();
+
+bool _isActive = true;
+int savedWorkOnTime = timerInfo[0];
+int savedRestTime = timerInfo[1];
+String savedAvatar = timerInfo[2];
+bool stopButtonClicked = false;
+String durationTypeA = '';
 
 startTimer() async {
   final startTime = DateTime.now().toString();
@@ -51,23 +60,33 @@ runTimer() async {
 }
 
 runTimerRecursive() {
-  Timer.periodic(const Duration(seconds: 1), (timer) async {
-    int difference = await runTimer();
-    if (difference % (savedWorkOnTime + savedRestTime) == 0) {
-      print('divisible');
-    } else if (difference % (savedWorkOnTime + savedRestTime) != 0) {
-      int remainder = difference % (savedWorkOnTime + savedRestTime);
-      if (remainder <= savedWorkOnTime) {
-        durationTypeA = 'work';
+  Timer.periodic(const Duration(seconds: 1), (mainTimer) async {
+    if (stopButtonClicked == false) {
+      int difference = await runTimer();
+      if (difference % (savedWorkOnTime + savedRestTime) == 0) {
+        _remainderController.add(savedRestTime);
+        print('divisible');
+        durationTypeA = 'rest';
         print('SHOULD RETURN WORK');
         _durationTypeController.add(durationTypeA);
-      } else {
-        durationTypeA = 'rest';
-        print('SHOULD RETURN REST');
-        _durationTypeController.add(durationTypeA);
-      }
+      } else if (difference % (savedWorkOnTime + savedRestTime) != 0) {
+        int remainder = difference % (savedWorkOnTime + savedRestTime);
+        if (remainder <= savedWorkOnTime) {
+          durationTypeA = 'work';
+          print('SHOULD RETURN WORK');
+          _durationTypeController.add(durationTypeA);
+        } else {
+          durationTypeA = 'rest';
+          print('SHOULD RETURN REST');
+          _durationTypeController.add(durationTypeA);
+        }
 
-      print(durationTypeA);
+        print(durationTypeA);
+        _remainderController.add(remainder);
+      }
+      print(_remainderController);
+    } else {
+      mainTimer.cancel();
     }
   });
 }
@@ -249,12 +268,8 @@ class CurrentTimer extends StatefulWidget {
 }
 
 class _CurrentTimerWidgetState extends State<CurrentTimer> {
-  int savedWorkOnTime = 0;
-  int savedRestTime = 0;
-  String savedAvatar = '';
-
   String durationType = '';
-
+  bool startButtonHide = false;
   endTimer() {
     print('timer end');
   }
@@ -269,10 +284,18 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
   @override
   void initState() {
     super.initState();
-    _retrieveTimerInfo();
     setState(() {
       durationType = durationTypeA;
     });
+  }
+
+  List<dynamic> timerInfo = [];
+
+  getTimerInfo() async {
+    timerInfo = await _retrieveTimerInfo();
+    savedWorkOnTime = timerInfo[0];
+    savedRestTime = timerInfo[1];
+    savedAvatar = timerInfo[2];
   }
 
   Widget build(BuildContext context) {
@@ -280,8 +303,8 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: StreamBuilder<String>(
-          stream: durationTypeStream, // Use the stream you've set up
-          initialData: durationTypeA, // Provide the initial value
+          stream: durationTypeStream,
+          initialData: durationTypeA,
           builder: (context, snapshot) {
             final currentDurationType = snapshot.data ?? durationTypeA;
 
@@ -307,23 +330,59 @@ class _CurrentTimerWidgetState extends State<CurrentTimer> {
                             ],
                           )
                         : SizedBox(),
-                ElevatedButton(
-                  onPressed: () {
-                    startTimer();
-                    runTimerRecursive();
-                    if (_isActive) {
-                      // Toggle between 'work' and 'rest' when the button is pressed
-                      if (currentDurationType == 'work') {
-                        // Add the new value to the stream
-                        _durationTypeController.add('rest');
-                      } else if (currentDurationType == 'rest') {
-                        // Add the new value to the stream
-                        _durationTypeController.add('work');
-                      }
+                StreamBuilder<int>(
+                  stream: remainderStream, // Replace with your remainder stream
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return SizedBox();
                     }
+
+                    int remainder = snapshot.data!;
+
+                    int time = 0;
+
+                    print('savedWorkOnTime $savedWorkOnTime');
+                    print('savedRestTime $savedRestTime');
+
+                    if (remainder <= savedWorkOnTime) {
+                      time = remainder;
+                      print(time);
+                    } else {
+                      time = remainder - savedWorkOnTime;
+                      print(time);
+                    }
+                    return Text('$currentDurationType: $time');
                   },
-                  child: const Text('start timer'),
                 ),
+                startButtonHide == false
+                    ? ElevatedButton(
+                        onPressed: () {
+                          startTimer();
+                          runTimerRecursive();
+                          if (_isActive) {
+                            // Toggle between 'work' and 'rest' when the button is pressed
+                            if (currentDurationType == 'work') {
+                              // Add the new value to the stream
+                              _durationTypeController.add('rest');
+                            } else if (currentDurationType == 'rest') {
+                              // Add the new value to the stream
+                              _durationTypeController.add('work');
+                            }
+                          }
+                          setState(() {
+                            startButtonHide = true;
+                          });
+                        },
+                        child: const Text('start timer'),
+                      )
+                    : startButtonHide == true && stopButtonClicked == false
+                        ? ElevatedButton(
+                            onPressed: () {
+                              stopButtonClicked = true;
+                              // STOP THE TIMER
+                            },
+                            child: Text('stop timer'))
+                        : SizedBox(),
               ],
             );
           },
